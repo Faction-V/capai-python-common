@@ -1,6 +1,6 @@
 [project]
 name = "capai-python-common"
-version = "v0.1.6"
+version = "v0.1.7"
 description = "Common capitol.ai python dependencies and utils"
 authors = [
     {name = "Jordan Austin",email = "jordan@capitol.ai"}

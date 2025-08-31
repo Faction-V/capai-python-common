@@ -7,16 +7,39 @@ import json
 from typing import Optional
 
 
-def setup_sentry(sentry_dsn: Optional[str] = None, release: str = None):
+def setup_sentry(sentry_dsn: Optional[str] = None, release: str = None, flavor: str = "fastapi"):
     """
     Setup sentry.io integration
-    docs: https://docs.sentry.io/platforms/python/integrations/fastapi/
+    
+    :param sentry_dsn: Optional Sentry DSN. If not provided, will use SENTRY_DSN environment variable
+    :param release: Optional release version. If not provided, will use IMAGE_TAG environment variable
+    :param flavor: The type of application ("fastapi" or "lambda"). Default is "fastapi"
+    
+    docs:
+    - FastAPI: https://docs.sentry.io/platforms/python/integrations/fastapi/
+    - AWS Lambda: https://docs.sentry.io/platforms/python/integrations/aws-lambda/
     """
     import sentry_sdk
     from sentry_sdk.integrations.typer import TyperIntegration
     from sentry_sdk.integrations.openai import OpenAIIntegration
-    from sentry_sdk.integrations.fastapi import FastApiIntegration
-    from sentry_sdk.integrations.starlette import StarletteIntegration
+    
+    # Common integrations
+    integrations = [
+        OpenAIIntegration(),
+        TyperIntegration(),
+    ]
+    
+    # Add environment-specific integrations
+    if flavor.lower() == "lambda":
+        from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
+        integrations.append(AwsLambdaIntegration(timeout_warning=True))
+    else:  # Default to FastAPI
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.starlette import StarletteIntegration
+        integrations.extend([
+            FastApiIntegration(transaction_style="endpoint"),
+            StarletteIntegration(transaction_style="endpoint"),
+        ])
 
     if not os.environ.get("SENTRY_DSN", None) and not sentry_dsn:
         return
@@ -30,16 +53,7 @@ def setup_sentry(sentry_dsn: Optional[str] = None, release: str = None):
         release=release or os.getenv("IMAGE_TAG", None),
         enable_logs=True,
         profile_lifecycle="trace",
-        integrations=[
-            OpenAIIntegration(),
-            TyperIntegration(),
-            FastApiIntegration(
-                transaction_style="endpoint",
-            ),
-            StarletteIntegration(
-                transaction_style="endpoint",
-            ),
-        ],
+        integrations=integrations,
     )
 
 
@@ -74,7 +88,10 @@ def sentry_message(
 
     # only init if not already initialized
     if isinstance(sentry_sdk.api.get_client(), NonRecordingClient):
-        setup_sentry()
+        # Try to detect if we're running in Lambda
+        is_lambda = 'AWS_LAMBDA_FUNCTION_NAME' in os.environ
+        flavor = "lambda" if is_lambda else "fastapi"
+        setup_sentry(flavor=flavor)
 
     if extra_context:
         for k, v in extra_context.items():

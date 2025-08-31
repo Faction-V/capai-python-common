@@ -5,7 +5,7 @@ dependencies shared across all services.
 
 - sentry.io integration
   - sentry_message() util
-  - setup_sentry()
+  - setup_sentry() - supports both FastAPI and AWS Lambda environments
 - opentelemetry setup for Coralogix ingestion
 - fastapi utility routes
   - /health
@@ -70,6 +70,26 @@ To update to a newer version:
    ```bash
    poetry update capai-python-common
    ```
+
+## Usage
+
+### Sentry Integration
+
+The package provides Sentry integration that works with both FastAPI applications and AWS Lambda functions:
+
+```python
+# For FastAPI applications (default)
+from capai_python_common import setup_sentry
+setup_sentry()  # Uses FastAPI integrations by default
+
+# For AWS Lambda functions
+from capai_python_common import setup_sentry
+setup_sentry(flavor="lambda")  # Uses AWS Lambda integration
+
+# Auto-detection in sentry_message
+from capai_python_common import sentry_message
+sentry_message("My message")  # Automatically detects if running in Lambda environment
+```
 
 ## Release Workflow
 

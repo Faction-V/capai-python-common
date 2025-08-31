@@ -7,12 +7,12 @@ import json
 from typing import Optional
 
 
-def setup_sentry(sentry_dsn: Optional[str] = None, release: str = None, flavor: Optional[str] = None):
+def setup_sentry(sentry_dsn: Optional[str] = None, release: Optional[str] = None, flavor: Optional[str] = None):
     """
     Setup sentry.io integration with automatic environment detection
     
     :param sentry_dsn: Optional Sentry DSN. If not provided, will use SENTRY_DSN environment variable
-    :param release: Optional release version. If not provided, will use IMAGE_TAG environment variable
+    :param release: Optional release version. If not provided, will use IMAGE_TAG environment variable or "unknown"
     :param flavor: Optional override for environment detection ("fastapi" or "lambda").
                   If not provided, will auto-detect based on environment variables
     
@@ -58,7 +58,7 @@ def setup_sentry(sentry_dsn: Optional[str] = None, release: str = None, flavor: 
         instrumenter="otel",  # OpenTelemetry instrumentation
         traces_sample_rate=os.environ.get("SENTRY_TRACES_SAMPLE_RATE", 1.0),
         profile_session_sample_rate=os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", 1.0),
-        release=release or os.getenv("IMAGE_TAG", None),
+        release=release or os.getenv("IMAGE_TAG", None) or "unknown",
         enable_logs=True,
         profile_lifecycle="trace",
         integrations=integrations,

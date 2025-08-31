@@ -87,12 +87,23 @@ from capai_python_common import setup_sentry
 setup_sentry(flavor="lambda")  # Force Lambda integration
 setup_sentry(flavor="fastapi")  # Force FastAPI integration
 
+# Specifying release version
+from capai_python_common import setup_sentry
+setup_sentry(release="v1.2.3")  # Explicitly set release version
+
 # Using sentry_message (also auto-detects environment)
 from capai_python_common import sentry_message
 sentry_message("My message")
 ```
 
 The environment detection checks for the presence of `AWS_LAMBDA_FUNCTION_NAME` environment variable to determine if running in a Lambda function.
+
+#### Release Version Handling
+
+The `setup_sentry` function handles release versions in the following order:
+1. Uses the `release` parameter if provided
+2. Falls back to the `IMAGE_TAG` environment variable if available
+3. Uses "unknown" as the final fallback if neither is available
 
 ## Release Workflow
 

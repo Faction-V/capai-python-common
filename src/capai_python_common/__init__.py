@@ -1,4 +1,4 @@
-from sentry import sentry_message, setup_sentry
+from .sentry import sentry_message, setup_sentry
 
 
 __all__ = [

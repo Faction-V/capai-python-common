@@ -1,0 +1,27 @@
+[project]
+name = "capai-python-common"
+version = "v0.1.0"
+description = "Common capitol.ai python dependencies and utils"
+authors = [
+    {name = "Jordan Austin",email = "jordan@capitol.ai"}
+]
+maintainers = [
+    {name = "Jordan Austin",email = "jordan@capitol.ai"}
+]
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "sentry-sdk (>=2.35.1,<3.0.0)",
+    "coralogix-opentelemetry (>=0.1.3,<0.2.0)",
+    "opentelemetry-exporter-otlp (>=1.36.0,<2.0.0)",
+    "opentelemetry-instrumentation-fastapi (>=0.57b0,<0.58)",
+    "opentelemetry-instrumentation-logging (>=0.57b0,<0.58)"
+]
+
+[tool.poetry]
+packages = [{include = "capai_python_common", from = "src"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

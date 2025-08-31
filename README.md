@@ -75,21 +75,24 @@ To update to a newer version:
 
 ### Sentry Integration
 
-The package provides Sentry integration that works with both FastAPI applications and AWS Lambda functions:
+The package provides Sentry integration that works with both FastAPI applications and AWS Lambda functions with automatic environment detection:
 
 ```python
-# For FastAPI applications (default)
+# Simple usage - automatically detects if running in FastAPI or AWS Lambda
 from capai_python_common import setup_sentry
-setup_sentry()  # Uses FastAPI integrations by default
+setup_sentry()  # Auto-detects environment
 
-# For AWS Lambda functions
+# Manual override if needed
 from capai_python_common import setup_sentry
-setup_sentry(flavor="lambda")  # Uses AWS Lambda integration
+setup_sentry(flavor="lambda")  # Force Lambda integration
+setup_sentry(flavor="fastapi")  # Force FastAPI integration
 
-# Auto-detection in sentry_message
+# Using sentry_message (also auto-detects environment)
 from capai_python_common import sentry_message
-sentry_message("My message")  # Automatically detects if running in Lambda environment
+sentry_message("My message")
 ```
+
+The environment detection checks for the presence of `AWS_LAMBDA_FUNCTION_NAME` environment variable to determine if running in a Lambda function.
 
 ## Release Workflow
 

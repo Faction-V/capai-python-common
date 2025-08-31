@@ -7,13 +7,14 @@ import json
 from typing import Optional
 
 
-def setup_sentry(sentry_dsn: Optional[str] = None, release: str = None, flavor: str = "fastapi"):
+def setup_sentry(sentry_dsn: Optional[str] = None, release: str = None, flavor: Optional[str] = None):
     """
-    Setup sentry.io integration
+    Setup sentry.io integration with automatic environment detection
     
     :param sentry_dsn: Optional Sentry DSN. If not provided, will use SENTRY_DSN environment variable
     :param release: Optional release version. If not provided, will use IMAGE_TAG environment variable
-    :param flavor: The type of application ("fastapi" or "lambda"). Default is "fastapi"
+    :param flavor: Optional override for environment detection ("fastapi" or "lambda").
+                  If not provided, will auto-detect based on environment variables
     
     docs:
     - FastAPI: https://docs.sentry.io/platforms/python/integrations/fastapi/
@@ -22,6 +23,13 @@ def setup_sentry(sentry_dsn: Optional[str] = None, release: str = None, flavor: 
     import sentry_sdk
     from sentry_sdk.integrations.typer import TyperIntegration
     from sentry_sdk.integrations.openai import OpenAIIntegration
+    
+    # Auto-detect environment if flavor is not specified
+    if flavor is None:
+        # Check if running in AWS Lambda
+        is_lambda = 'AWS_LAMBDA_FUNCTION_NAME' in os.environ
+        detected_flavor = "lambda" if is_lambda else "fastapi"
+        flavor = detected_flavor
     
     # Common integrations
     integrations = [
@@ -88,10 +96,8 @@ def sentry_message(
 
     # only init if not already initialized
     if isinstance(sentry_sdk.api.get_client(), NonRecordingClient):
-        # Try to detect if we're running in Lambda
-        is_lambda = 'AWS_LAMBDA_FUNCTION_NAME' in os.environ
-        flavor = "lambda" if is_lambda else "fastapi"
-        setup_sentry(flavor=flavor)
+        # Auto-detection will happen in setup_sentry
+        setup_sentry()
 
     if extra_context:
         for k, v in extra_context.items():

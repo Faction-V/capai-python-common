@@ -7,7 +7,8 @@ import json
 from typing import Optional
 
 
-def setup_sentry(sentry_dsn: Optional[str] = None, release: Optional[str] = None, flavor: Optional[str] = None):
+def setup_sentry(sentry_dsn: Optional[str] = None, release: Optional[str] = None,
+                flavor: Optional[str] = None, extra_integrations: Optional[list] = None):
     """
     Setup sentry.io integration with automatic environment detection
     
@@ -15,6 +16,8 @@ def setup_sentry(sentry_dsn: Optional[str] = None, release: Optional[str] = None
     :param release: Optional release version. If not provided, will use IMAGE_TAG environment variable or "unknown"
     :param flavor: Optional override for environment detection ("fastapi" or "lambda").
                   If not provided, will auto-detect based on environment variables
+    :param extra_integrations: Optional list of additional Sentry integrations to include
+                              (e.g., [CeleryIntegration(monitor_beat_tasks=True)])
     
     docs:
     - FastAPI: https://docs.sentry.io/platforms/python/integrations/fastapi/
@@ -48,6 +51,10 @@ def setup_sentry(sentry_dsn: Optional[str] = None, release: Optional[str] = None
             FastApiIntegration(transaction_style="endpoint"),
             StarletteIntegration(transaction_style="endpoint"),
         ])
+    
+    # Add any extra integrations provided by the caller
+    if extra_integrations:
+        integrations.extend(extra_integrations)
 
     if not os.environ.get("SENTRY_DSN", None) and not sentry_dsn:
         return

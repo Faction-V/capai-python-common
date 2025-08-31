@@ -91,6 +91,13 @@ setup_sentry(flavor="fastapi")  # Force FastAPI integration
 from capai_python_common import setup_sentry
 setup_sentry(release="v1.2.3")  # Explicitly set release version
 
+# Adding custom integrations
+from capai_python_common import setup_sentry
+from sentry_sdk.integrations.celery import CeleryIntegration
+setup_sentry(extra_integrations=[
+    CeleryIntegration(monitor_beat_tasks=True)
+])
+
 # Using sentry_message (also auto-detects environment)
 from capai_python_common import sentry_message
 sentry_message("My message")
@@ -104,6 +111,24 @@ The `setup_sentry` function handles release versions in the following order:
 1. Uses the `release` parameter if provided
 2. Falls back to the `IMAGE_TAG` environment variable if available
 3. Uses "unknown" as the final fallback if neither is available
+
+#### Custom Integrations
+
+You can add your own Sentry SDK integrations using the `extra_integrations` parameter:
+
+```python
+from capai_python_common import setup_sentry
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.django import DjangoIntegration
+
+# Add multiple custom integrations with their own configurations
+setup_sentry(extra_integrations=[
+    CeleryIntegration(monitor_beat_tasks=True),
+    DjangoIntegration(transaction_style="url")
+])
+```
+
+These custom integrations will be added to the default ones provided by the package.
 
 ## Release Workflow
 

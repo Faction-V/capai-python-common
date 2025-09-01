@@ -18,6 +18,7 @@ class HealthResponse(BaseModel):
 
     message: str
 
+
 class SentryResponse(BaseModel):
     """Sentry test response model."""
 
@@ -35,7 +36,9 @@ async def health_check() -> HealthResponse:
     return HealthResponse(message="Service is alive")
 
 
-@router.get("/ping-sentry", response_model=SentryResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/ping-sentry", response_model=SentryResponse, status_code=status.HTTP_200_OK
+)
 def ping_sentry() -> Union[SentryResponse, Dict[str, str]]:
     """
     Test Sentry.io connection by generating a test exception.
@@ -67,6 +70,3 @@ def ping_sentry() -> Union[SentryResponse, Dict[str, str]]:
 
         # Return a SentryResponse object when called through FastAPI
         return SentryResponse(sentry_response_hash=event_id)
-
-
-

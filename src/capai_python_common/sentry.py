@@ -7,51 +7,51 @@ import json
 from typing import Optional
 
 
-def setup_sentry(sentry_dsn: Optional[str] = None, release: Optional[str] = None,
-                flavor: Optional[str] = None, extra_integrations: Optional[list] = None):
+def setup_sentry(
+    sentry_dsn: Optional[str] = None,
+    release: Optional[str] = None,
+    flavor: Optional[str] = None,
+    extra_integrations: Optional[list] = None,
+):
     """
     Setup sentry.io integration with automatic environment detection
-    
+
     :param sentry_dsn: Optional Sentry DSN. If not provided, will use SENTRY_DSN environment variable
     :param release: Optional release version. If not provided, will use IMAGE_TAG environment variable or "unknown"
     :param flavor: Optional override for environment detection ("fastapi" or "lambda").
                   If not provided, will auto-detect based on environment variables
     :param extra_integrations: Optional list of additional Sentry integrations to include
                               (e.g., [CeleryIntegration(monitor_beat_tasks=True)])
-    
+
     docs:
     - FastAPI: https://docs.sentry.io/platforms/python/integrations/fastapi/
     - AWS Lambda: https://docs.sentry.io/platforms/python/integrations/aws-lambda/
     """
     import sentry_sdk
-    from sentry_sdk.integrations.typer import TyperIntegration
-    from sentry_sdk.integrations.openai import OpenAIIntegration
-    
+
     # Auto-detect environment if flavor is not specified
     if flavor is None:
         # Check if running in AWS Lambda
-        is_lambda = 'AWS_LAMBDA_FUNCTION_NAME' in os.environ
+        is_lambda = "AWS_LAMBDA_FUNCTION_NAME" in os.environ
         detected_flavor = "lambda" if is_lambda else "fastapi"
         flavor = detected_flavor
-    
-    # Common integrations
-    integrations = [
-        OpenAIIntegration(),
-        TyperIntegration(),
-    ]
-    
+    integrations = []
     # Add environment-specific integrations
     if flavor.lower() == "lambda":
         from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
+
         integrations.append(AwsLambdaIntegration(timeout_warning=True))
     else:  # Default to FastAPI
         from sentry_sdk.integrations.fastapi import FastApiIntegration
         from sentry_sdk.integrations.starlette import StarletteIntegration
-        integrations.extend([
-            FastApiIntegration(transaction_style="endpoint"),
-            StarletteIntegration(transaction_style="endpoint"),
-        ])
-    
+
+        integrations.extend(
+            [
+                FastApiIntegration(transaction_style="endpoint"),
+                StarletteIntegration(transaction_style="endpoint"),
+            ]
+        )
+
     # Add any extra integrations provided by the caller
     if extra_integrations:
         integrations.extend(extra_integrations)
@@ -129,3 +129,23 @@ def sentry_message(
             )
 
     return sentry_sdk.capture_message(message)
+
+
+def sentry_message_test():
+    """
+    Send a test message to sentry.  If a sentry message hash is returned, you are successful.
+    """
+    response = sentry_message(
+        "Sentry connection test",
+        extra_context={"test": "This is a test message to check Sentry connection."},
+        tags={"test": "sentry_connection"},
+        attachments=[
+            {
+                "data": {"key": "value"},
+                "filename": "test_attachment.json",
+                "content_type": "application/json",
+            }
+        ],
+    )
+
+    return response

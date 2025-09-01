@@ -15,9 +15,18 @@ dependencies shared across all services.
 
 This package can be installed directly from GitHub using Poetry:
 
+To use the latest all the time:
+
 ```bash
 # Add the dependency to your project
-poetry add git+https://github.com/Faction-V/capai-python-common.git@v0.1.0
+poetry add git+https://github.com/Faction-V/capai-python-common.git
+```
+
+To pin to a specific version:
+```bash
+```bash
+# Add the dependency to your project
+poetry add git+https://github.com/Faction-V/capai-python-common.git@v0.1.9
 ```
 
 Or specify it in your `pyproject.toml`:

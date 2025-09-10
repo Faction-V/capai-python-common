@@ -7,12 +7,6 @@ from typing import Optional
 import arrow
 from ..logging import logger as default_logger
 
-PYTHON_MAGIC_AVAILABLE=False
-try:
-    import magic
-    PYTHON_MAGIC_AVAILABLE=True
-except ImportError as e:
-    default_logger.warning(f"{str(e)}.  You might be missing `apt install libmagic-dev?")
 
 class s3Client:
     def __init__(self, bucket: str, logger: Optional[logging.Logger] = None):
@@ -21,6 +15,13 @@ class s3Client:
         self.uploaded = 0
         self.s3 = boto3.client("s3")
         self.logger = logger or default_logger
+        self.PYTHON_MAGIC_AVAILABLE = False
+        try:
+            import magic
+            self.magic_lib = magic
+            self.PYTHON_MAGIC_AVAILABLE=True
+        except ImportError as e:
+            default_logger.warning(f"{str(e)}.  You might be missing `apt install libmagic-dev?`")
 
     def exists_in_s3(self, key):
         try:
@@ -63,8 +64,8 @@ class s3Client:
             bool: True if successful
         """
         self.total = os.stat(file).st_size
-        if content_type is None and PYTHON_MAGIC_AVAILABLE:
-            mime = magic.Magic(mime=True)
+        if content_type is None and self.PYTHON_MAGIC_AVAILABLE:
+            mime = self.magic_lib.Magic(mime=True)
             content_type = mime.from_file(file)
 
         extra_args = {"ContentType": content_type}

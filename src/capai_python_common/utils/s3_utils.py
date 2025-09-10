@@ -2,18 +2,19 @@ import boto3
 from botocore.exceptions import ClientError
 import logging
 import os
+from typing import Optional
 import magic
 import arrow
-
-logger = logging.getLogger(__name__)
+from ..logging import logger as default_logger
 
 
 class s3Client:
-    def __init__(self, *args, **kwargs):
-        self.bucket = kwargs.pop("bucket")
+    def __init__(self, bucket: str, logger: Optional[logging.Logger] = None):
+        self.bucket = bucket
         self.total = 0
         self.uploaded = 0
         self.s3 = boto3.client("s3")
+        self.logger = logger or default_logger
 
     def exists_in_s3(self, key):
         try:
@@ -38,7 +39,7 @@ class s3Client:
         if self.total == 0:
             return
         self.uploaded += size
-        # logger.debug("{} %".format(int(self.uploaded / self.total * 100)))
+        # self.logger.debug("{} %".format(int(self.uploaded / self.total * 100)))
 
     def upload(self, key, file, content_type=None, metadata=None, tags=None):
         """
@@ -156,7 +157,7 @@ class s3Client:
                                 for tag in tag_response["TagSet"]
                             }
                     except ClientError as e:
-                        logger.warning(
+                        self.logger.warning(
                             f"Error getting tags for object {obj['Key']}: {e}"
                         )
 
@@ -178,7 +179,7 @@ class s3Client:
             return objects
 
         except ClientError as e:
-            logger.error(f"Error listing objects: {e}")
+            self.logger.error(f"Error listing objects: {e}")
             raise
 
     def delete_object(self, key):
@@ -193,10 +194,10 @@ class s3Client:
         """
         try:
             self.s3.delete_object(Bucket=self.bucket, Key=key)
-            logger.info(f"Successfully deleted object: {key}")
+            self.logger.info(f"Successfully deleted object: {key}")
             return True
         except ClientError as e:
-            logger.error(f"Error deleting object {key}: {e}")
+            self.logger.error(f"Error deleting object {key}: {e}")
             raise
 
     def create_collection(self, orgid, collection) -> str:
@@ -230,10 +231,10 @@ class s3Client:
                 },
             )
 
-            logger.info(f"Successfully created collection: {orgid}/{collection}")
+            self.logger.info(f"Successfully created collection: {orgid}/{collection}")
             return collection_prefix
         except ClientError as e:
-            logger.error(f"Error creating collection {orgid}/{collection}: {e}")
+            self.logger.error(f"Error creating collection {orgid}/{collection}: {e}")
             raise
 
     def delete_collection(self, s3_prefix: str) -> dict:
@@ -266,7 +267,7 @@ class s3Client:
                         obj["Key"] for obj in delete_response.get("Deleted", [])
                     ]
 
-            logger.info(
+            self.logger.info(
                 f"Successfully deleted collection: {s3_prefix} ({len(deleted_objects)} objects)"
             )
             return {
@@ -276,7 +277,7 @@ class s3Client:
             }
 
         except ClientError as e:
-            logger.error(f"Error deleting collection {s3_prefix}: {e}")
+            self.logger.error(f"Error deleting collection {s3_prefix}: {e}")
             raise
 
     def list_collections(self, orgid):
@@ -306,7 +307,7 @@ class s3Client:
             return collections
 
         except ClientError as e:
-            logger.error(f"Error listing collections for {orgid}: {e}")
+            self.logger.error(f"Error listing collections for {orgid}: {e}")
             raise
 
     def get_tags(self, key):
@@ -323,7 +324,7 @@ class s3Client:
             response = self.s3.get_object_tagging(Bucket=self.bucket, Key=key)
             return {tag["Key"]: tag["Value"] for tag in response.get("TagSet", [])}
         except ClientError as e:
-            logger.error(f"Error getting tags for object {key}: {e}")
+            self.logger.error(f"Error getting tags for object {key}: {e}")
             raise
 
     def put_tags(self, key, tags):
@@ -342,10 +343,10 @@ class s3Client:
             self.s3.put_object_tagging(
                 Bucket=self.bucket, Key=key, Tagging={"TagSet": tags}
             )
-            logger.info(f"Successfully set tags on object: {key}")
+            self.logger.info(f"Successfully set tags on object: {key}")
             return True
         except ClientError as e:
-            logger.error(f"Error setting tags on object {key}: {e}")
+            self.logger.error(f"Error setting tags on object {key}: {e}")
             raise
 
     def append_tags(self, key, new_tags, exclude_keys=None):
@@ -394,11 +395,11 @@ class s3Client:
                 # Check if the total number of tags exceeds the AWS limit of 10
                 if len(updated_tags) > 10:
                     error_msg = f"Total number of tags ({len(updated_tags)}) would exceed AWS limit of 10 tags per object for {key}"
-                    logger.error(error_msg)
+                    self.logger.error(error_msg)
                     raise ValueError(error_msg)
 
             except ClientError as tag_error:
-                logger.warning(
+                self.logger.warning(
                     f"Error getting existing tags for {key}: {str(tag_error)}. Using only new tags."
                 )
                 updated_tags = new_tags
@@ -406,7 +407,7 @@ class s3Client:
                 # Still check the limit even if we're only using new tags
                 if len(updated_tags) > 10:
                     error_msg = f"Total number of tags ({len(updated_tags)}) would exceed AWS limit of 10 tags per object for {key}"
-                    logger.error(error_msg)
+                    self.logger.error(error_msg)
                     raise ValueError(error_msg)
 
             # Update object with combined tags
@@ -414,9 +415,9 @@ class s3Client:
                 Bucket=self.bucket, Key=key, Tagging={"TagSet": updated_tags}
             )
 
-            logger.info(f"Successfully appended tags to object: {key}")
+            self.logger.info(f"Successfully appended tags to object: {key}")
             return True
 
         except ClientError as e:
-            logger.error(f"Error appending tags to object {key}: {e}")
+            self.logger.error(f"Error appending tags to object {key}: {e}")
             raise

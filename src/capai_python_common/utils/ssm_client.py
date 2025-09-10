@@ -2,14 +2,13 @@
 AWS SSM Parameter Store client for secure parameter management.
 """
 
+import os
 import boto3
 from botocore.exceptions import ClientError
-
-from config import settings
-from utils import get_logger
+import logging
 from sentry_sdk import capture_exception
-
-logger = get_logger("app")
+from typing import Optional
+from ..logging import logger as default_logger
 
 
 class SSMClient:
@@ -17,11 +16,12 @@ class SSMClient:
     A client for interacting with AWS SSM Parameter Store.
     """
 
-    def __init__(self):
+    def __init__(self, logger: Optional[logging.Logger] = None):
         """
         Initialize the SSM client.
         """
-        self.client = boto3.client("ssm", region_name=settings.AWS_REGION)
+        self.client = boto3.client("ssm", region_name=os.environ.get("AWS_REGION"))
+        self.logger = logger or default_logger
 
     def create_secure_parameter(
         self, name: str, value: str, description: str = ""
@@ -56,17 +56,17 @@ class SSMClient:
                     return param_info["Parameters"][0].get("ARN", name)
                 else:
                     # If we can't get the ARN, construct a pseudo-ARN using the name
-                    logger.warning(
+                    self.logger.warning(
                         f"Could not retrieve ARN for parameter {name}, using name as identifier"
                     )
                     return name
             except Exception as e:
-                logger.warning(f"Error retrieving parameter ARN: {e}")
+                self.logger.warning(f"Error retrieving parameter ARN: {e}")
                 return name
 
         except ClientError as e:
             capture_exception(e)
-            logger.error(f"Error creating secure parameter: {e}")
+            self.logger.error(f"Error creating secure parameter: {e}")
             raise e
 
     def get_secure_parameter(self, name_or_arn: str) -> str | None:
@@ -92,23 +92,23 @@ class SSMClient:
                     else:
                         parameter_name = f"/{parameter_path}"
                 else:
-                    logger.error(f"Invalid ARN format: {name_or_arn}")
+                    self.logger.error(f"Invalid ARN format: {name_or_arn}")
                     return None
             else:
                 # If not an ARN, use as is
                 parameter_name = name_or_arn
 
-            logger.debug(f"Getting parameter: {parameter_name}")
+            self.logger.debug(f"Getting parameter: {parameter_name}")
             response = self.client.get_parameter(
                 Name=parameter_name, WithDecryption=True
             )
             return response["Parameter"]["Value"]
         except self.client.exceptions.ParameterNotFound:
-            logger.warning(f"Parameter not found: {name_or_arn}")
+            self.logger.warning(f"Parameter not found: {name_or_arn}")
             return None
         except Exception as e:
             capture_exception(e)
-            logger.error(f"Error getting parameter: {e}")
+            self.logger.error(f"Error getting parameter: {e}")
             return None
 
     def delete_parameter(self, arn: str) -> bool:
@@ -135,18 +135,18 @@ class SSMClient:
                     else:
                         parameter_name = f"/{parameter_path}"
                 else:
-                    logger.error(f"Invalid ARN format: {arn}")
+                    self.logger.error(f"Invalid ARN format: {arn}")
                     return False
             else:
                 # If not an ARN, use as is (for backward compatibility)
                 parameter_name = arn
 
-            logger.debug(f"Deleting parameter: {parameter_name}")
+            self.logger.debug(f"Deleting parameter: {parameter_name}")
             self.client.delete_parameter(Name=parameter_name)
             return True
         except Exception as e:
             capture_exception(e)
-            logger.error(f"Error deleting parameter: {e}")
+            self.logger.error(f"Error deleting parameter: {e}")
             return False
 
     def update_parameter(self, arn: str, value: str, description: str = "") -> bool:
@@ -175,13 +175,13 @@ class SSMClient:
                     else:
                         parameter_name = f"/{parameter_path}"
                 else:
-                    logger.error(f"Invalid ARN format: {arn}")
+                    self.logger.error(f"Invalid ARN format: {arn}")
                     return False
             else:
                 # If not an ARN, use as is (for backward compatibility)
                 parameter_name = arn
 
-            logger.debug(f"Updating parameter: {parameter_name}")
+            self.logger.debug(f"Updating parameter: {parameter_name}")
             self.client.put_parameter(
                 Name=parameter_name,
                 Value=value,
@@ -192,5 +192,5 @@ class SSMClient:
             return True
         except Exception as e:
             capture_exception(e)
-            logger.error(f"Error updating parameter: {e}")
+            self.logger.error(f"Error updating parameter: {e}")
             return False

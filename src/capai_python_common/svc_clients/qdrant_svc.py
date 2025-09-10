@@ -1,17 +1,14 @@
-from config import settings
-from utils.ssm_client import SSMClient
+import logging
 import requests
-import boto3
 from typing import Optional
 from sentry_sdk import capture_exception
-from utils import get_logger
-
-logger = get_logger()
+from ..logging import logger as default_logger
 
 
 class QdrantService:
-    def __init__(self):
-        self.base_url = settings.QDRANT_SVC_BASE_URL
+    def __init__(self, base_url: str, logger: Optional[logging.Logger] = None):
+        self.base_url = base_url
+        self.logger = logger or default_logger
 
     def create_qdrant_collection(
         self,
@@ -68,11 +65,11 @@ class QdrantService:
             return response.json()
         except requests.exceptions.RequestException as e:
             capture_exception(e)
-            logger.error(f"Error creating Qdrant collection: {str(e)}")
+            self.logger.error(f"Error creating Qdrant collection: {str(e)}")
             raise Exception(f"Failed to create Qdrant collection: {str(e)}")
         except Exception as e:
             capture_exception(e)
-            logger.error(f"Unexpected error creating Qdrant collection: {str(e)}")
+            self.logger.error(f"Unexpected error creating Qdrant collection: {str(e)}")
             raise Exception(f"Unexpected error creating Qdrant collection: {str(e)}")
 
     def delete_points_by_external_id(
@@ -114,7 +111,7 @@ class QdrantService:
             return response.json()
         except requests.exceptions.RequestException as e:
             capture_exception(e)
-            logger.error(
+            self.logger.error(
                 f"Error deleting Qdrant points for external_id {external_id}: {str(e)}"
             )
             raise Exception(
@@ -122,7 +119,7 @@ class QdrantService:
             )
         except Exception as e:
             capture_exception(e)
-            logger.error(
+            self.logger.error(
                 f"Unexpected error deleting Qdrant points for external_id {external_id}: {str(e)}"
             )
             raise Exception(
@@ -158,9 +155,9 @@ class QdrantService:
             return response.json()
         except requests.exceptions.RequestException as e:
             capture_exception(e)
-            logger.error(f"Error deleting Qdrant collection: {str(e)}")
+            self.logger.error(f"Error deleting Qdrant collection: {str(e)}")
             raise Exception(f"Failed to delete Qdrant collection: {str(e)}")
         except Exception as e:
             capture_exception(e)
-            logger.error(f"Unexpected error deleting Qdrant collection: {str(e)}")
+            self.logger.error(f"Unexpected error deleting Qdrant collection: {str(e)}")
             raise Exception(f"Unexpected error deleting Qdrant collection: {str(e)}")

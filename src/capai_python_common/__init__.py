@@ -11,7 +11,6 @@ __all__ = [
     "SSMClient",
     "QdrantService",
     "S3Utils",
-    "logger", # pre-configured logger instance
-    "setup_logging" # allow customization of logging if needed
-
+    "logger",  # pre-configured logger instance
+    "setup_logging",  # allow customization of logging if needed
 ]

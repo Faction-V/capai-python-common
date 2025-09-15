@@ -3,7 +3,7 @@ from botocore.exceptions import ClientError
 import logging
 import os
 from typing import Optional
-
+from sentry_sdk import capture_exception
 import arrow
 from ..logging import logger as default_logger
 
@@ -18,10 +18,13 @@ class s3Client:
         self.PYTHON_MAGIC_AVAILABLE = False
         try:
             import magic
+
             self.magic_lib = magic
-            self.PYTHON_MAGIC_AVAILABLE=True
+            self.PYTHON_MAGIC_AVAILABLE = True
         except ImportError as e:
-            default_logger.warning(f"{str(e)}.  You might be missing `apt install libmagic-dev?`")
+            default_logger.warning(
+                f"{str(e)}.  You might be missing `apt install libmagic-dev?`"
+            )
 
     def exists_in_s3(self, key):
         try:
@@ -87,6 +90,42 @@ class s3Client:
                 ExtraArgs=extra_args,
             )
         return True
+
+    def download(self, key: str, download_path: str = "/tmp"):
+        """
+        Download a file from S3 to a local path
+
+        Args:
+            key (str): S3 object key
+            download_path (str): Local path to download the file to
+
+        Returns:
+            str: Path to the downloaded file
+        """
+        exists = self.exists_in_s3(key)
+        if not exists:
+            raise FileNotFoundError(
+                f"S3 object with key '{key}' not found in bucket '{self.bucket}'"
+            )
+
+        # Extract filename from key
+        filename = key.split("/")[-1] if "/" in key else key
+
+        # Create the full local file path
+        local_file_path = os.path.join(download_path, filename)
+
+        try:
+            # Ensure the download directory exists
+            os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+
+            # Download the file
+            self.s3.download_file(Bucket=self.bucket, Key=key, Filename=local_file_path)
+
+            return local_file_path
+
+        except ClientError as e:
+            capture_exception(e)
+            raise
 
     def create_presigned_url(self, object_key, expiration=3600, download: bool = False):
         """Generate a presigned URL to share an S3 object

@@ -35,6 +35,32 @@ class s3Client:
             else:
                 raise
         return s3obj
+    def dir_exists(self, prefix):
+        """
+        Check if a directory (prefix) exists in the S3 bucket
+
+        In S3, directories are virtual concepts represented by prefixes in object keys.
+        This method checks if any objects exist with the given prefix.
+
+        Args:
+            prefix (str): S3 prefix to check (e.g., "orgid/collection/")
+
+        Returns:
+            bool: True if the directory exists, False otherwise
+        """
+        try:
+            # Ensure the prefix ends with a slash to avoid partial matches
+            if not prefix.endswith("/"):
+                prefix = prefix + "/"
+
+            # List objects with the given prefix with a limit of 1
+            response = self.s3.list_objects_v2(Bucket=self.bucket, Prefix=prefix, MaxKeys=1)
+
+            # If any objects are returned, the directory exists
+            return "Contents" in response and len(response["Contents"]) > 0
+
+        except ClientError as e:
+            raise
 
     def empty_bucket(self):
         """

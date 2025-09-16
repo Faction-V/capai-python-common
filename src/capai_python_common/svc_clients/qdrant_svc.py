@@ -5,6 +5,12 @@ from sentry_sdk import capture_exception
 from ..logging import logger as default_logger
 
 
+class CollectionNotFoundException(Exception):
+    """Exception raised when a collection is not found (404)."""
+
+    pass
+
+
 class QdrantService:
     def __init__(self, base_url: str, logger: Optional[logging.Logger] = None):
         self.base_url = base_url
@@ -161,3 +167,61 @@ class QdrantService:
             capture_exception(e)
             self.logger.error(f"Unexpected error deleting Qdrant collection: {str(e)}")
             raise Exception(f"Unexpected error deleting Qdrant collection: {str(e)}")
+
+    def collection_info(
+        self,
+        collection_name: str,
+        orgid: Optional[str] = None,
+        cluster_id: Optional[str] = None,
+    ) -> dict:
+        """
+        Get information about a Qdrant collection.
+
+        Args:
+            collection_name: Name of the collection to get info for
+
+        Returns:
+            dict: Response from the Qdrant service API
+
+        Raises:
+            CollectionNotFoundException: If the collection does not exist (404)
+            Exception: For other request errors
+        """
+        endpoint = f"{self.base_url}/collection-info"
+
+        try:
+            response = requests.get(
+                endpoint,
+                params={
+                    "collection_name": collection_name,
+                    "platform_cluster_id": cluster_id,
+                    "orgid": orgid,
+                },
+            )
+            response.raise_for_status()  # Raise an exception for HTTP errors
+
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            capture_exception(e)
+            if e.response.status_code == 404:
+                self.logger.warning(f"Collection not found: {collection_name}")
+                raise CollectionNotFoundException(
+                    f"Collection '{collection_name}' not found"
+                )
+            else:
+                self.logger.error(
+                    f"HTTP error getting Qdrant collection info: {str(e)}"
+                )
+                raise Exception(f"Failed to get Qdrant collection info: {str(e)}")
+        except requests.exceptions.RequestException as e:
+            capture_exception(e)
+            self.logger.error(f"Error getting Qdrant collection info: {str(e)}")
+            raise Exception(f"Failed to get Qdrant collection info: {str(e)}")
+        except Exception as e:
+            capture_exception(e)
+            self.logger.error(
+                f"Unexpected error getting Qdrant collection info: {str(e)}"
+            )
+            raise Exception(
+                f"Unexpected error getting Qdrant collection info: {str(e)}"
+            )
